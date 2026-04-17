@@ -33,9 +33,12 @@ class ReviewListSerializer(serializers.ModelSerializer):
 class ReviewDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
-        fields = '__all__'
+        fields = 'text product'.split()
 
-
+class ReviewCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = 'text product stars'.split()
 
 #hw4
 class CategoryValidateSerializer(serializers.Serializer):
