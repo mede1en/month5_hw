@@ -49,6 +49,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
     ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination', # Добавьте это
     'PAGE_SIZE': 3
 }
 
@@ -95,8 +96,7 @@ DATABASES = {
         'PORT': os.environ.get('DB_PORT'),
     }
 }
-print(os.environ.get('DB_USER'))
-print(os.environ.get('DB_PASSWORD'))
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
