@@ -1,5 +1,5 @@
 from rest_framework.decorators import api_view
-from django.contrib.auth.models import User
+from .models import CustomUser
 from rest_framework.response import Response
 from rest_framework import  status
 from .serializers import RegisterValidateSerializer, LoginValidateSerializer
@@ -14,13 +14,15 @@ class RegisterAPIView(APIView):
         serializer = RegisterValidateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        email = request.data.get('email')
-        password = request.data.get('password')
+        email = serializer.validated_data.get('email')
+        password = serializer.validated_data.get('password')
+        phone_number = serializer.validated_data.get('phone_number')
 
-        user = User.objects.create_user(username=email,
-                                        password=password)
-        user.is_active=False
-        user.save()
+        user = CustomUser.objects.create_user(
+            email=email,
+            password=password,
+            phone_number=phone_number
+        )
 
         code = ConfirmationCode.objects.create(user=user)
         code.generate_code()
@@ -34,15 +36,27 @@ class LoginAPIView(APIView):
     def post(self, request):
         serializer = LoginValidateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
+        user = authenticate(
+            email=serializer.validated_data['email'],
+            password=serializer.validated_data['password']
+        )
+
+        if not user:
+            return Response(
+                {'error': 'Invalid credentials'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
         return Response({"message": "Login successful"})
 
 
 class AuthAPIView(APIView):
     def post(self, request):
-        username = request.data.get('username')
+        email = request.data.get('email')
         password = request.data.get('password')
 
-        user = authenticate(username=username, password=password)
+        user = authenticate(email=email, password=password)
         if user is not None:
             try:
                 token = Token.objects.get(user=user)
@@ -60,4 +74,7 @@ class ConfirmAPIView(APIView):
         except ConfirmationCode.DoesNotExist:
             return Response({'error': 'Invalid code'},
                             status=status.HTTP_404_NOT_FOUND)
-        return Response('Congratulations!')
+        confirmation.user.is_active = True
+        confirmation.user.save()
+
+        return Response({'message': 'Account confirmed'})

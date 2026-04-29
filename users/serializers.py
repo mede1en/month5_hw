@@ -3,11 +3,9 @@ from users.models import CustomUser
 from django.contrib.auth import authenticate
 
 class RegisterValidateSerializer(serializers.Serializer):
+    email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
-
-    class Meta:
-        model = CustomUser
-        fields = ('email', 'password', 'phone_number')
+    phone_number = serializers.CharField(required=False)
 
     def create(self, validated_data):
         return CustomUser.objects.create_user(**validated_data)

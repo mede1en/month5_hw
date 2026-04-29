@@ -18,7 +18,7 @@ class CustomUserManager(BaseUserManager):
 
         if extra_fields.get('is_staff') is not True:
             raise ValueError(' is_staff must be True.')
-        if extra_fields.get('is_supersuer') is not True:
+        if extra_fields.get('is_superuser') is not True:
             raise ValueError(' is_superuser must be True.')
         if extra_fields.get('is_active') is not True:
             raise ValueError(' is_active must be True.')

@@ -1,7 +1,7 @@
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
 from users.managers import CustomUserManager
-
+import random
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
@@ -12,16 +12,16 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     objects = CustomUserManager()
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = []
+    REQUIRED_FIELDS = ['phone_number']
 
     def __str__(self):
         return self.email
 
 
-#
-# class ConfirmationCode(models.Model):
-#     code = models.CharField(max_length=7)
-#     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
-#
-#     def generate_code(self):
-#         self.code = random.randint(10000, 99999)
+
+class ConfirmationCode(models.Model):
+    code = models.CharField(max_length=7)
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+
+    def generate_code(self):
+        self.code = str(random.randint(10000, 99999))
