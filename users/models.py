@@ -1,10 +1,27 @@
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
-import random
+from users.managers import CustomUserManager
 
-class ConfirmationCode(models.Model):
-    code = models.CharField(max_length=7)
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
 
-    def generate_code(self):
-        self.code = random.randint(10000, 99999)
+class CustomUser(AbstractBaseUser, PermissionsMixin):
+    email = models.EmailField(unique=True)
+    phone_number = models.CharField(max_length=20, null=True, blank=True)
+
+    is_active = models.BooleanField(default=False)
+    is_staff = models.BooleanField(default=False)
+    objects = CustomUserManager()
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = []
+
+    def __str__(self):
+        return self.email
+
+
+#
+# class ConfirmationCode(models.Model):
+#     code = models.CharField(max_length=7)
+#     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+#
+#     def generate_code(self):
+#         self.code = random.randint(10000, 99999)
