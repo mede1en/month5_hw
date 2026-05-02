@@ -1,23 +1,48 @@
 from rest_framework import serializers
-from users.models import CustomUser
-from django.contrib.auth import authenticate
-
-class RegisterValidateSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    password = serializers.CharField(write_only=True)
-    phone_number = serializers.CharField(required=False)
-
-    def create(self, validated_data):
-        return CustomUser.objects.create_user(**validated_data)
+from rest_framework.exceptions import ValidationError
+from .models import ConfirmationCode
+from django.contrib.auth import get_user_model
 
 
-class LoginValidateSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    password = serializers.CharField(write_only=True)
+CustomUser = get_user_model()
 
-    def validate(self, data):
-        user = authenticate(email=data['email'],
-                            password=data['password'])
-        if not user:
-            raise serializers.ValidationError("Incorrect email or password.")
-        return user
+class UserBaseSerializer(serializers.Serializer):
+    email = serializers.CharField(max_length=150)
+    password = serializers.CharField()
+
+
+class AuthValidateSerializer(UserBaseSerializer):
+    pass
+
+
+class RegisterValidateSerializer(UserBaseSerializer):
+    def validate_username(self, email):
+        try:
+            CustomUser.objects.get(email=email)
+        except:
+            return email
+        raise ValidationError('CustomUser уже существует!')
+
+
+class ConfirmationSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField()
+    code = serializers.CharField(max_length=6)
+
+    def validate(self, attrs):
+        user_id = attrs.get('user_id')
+        code = attrs.get('code')
+
+        try:
+            user = CustomUser.objects.get(id=user_id)
+        except CustomUser.DoesNotExist:
+            raise ValidationError('CustomUser не существует!')
+
+        try:
+            confirmation_code = ConfirmationCode.objects.get(user=user)
+        except ConfirmationCode.DoesNotExist:
+            raise ValidationError('Код подтверждения не найден!')
+
+        if confirmation_code.code != code:
+            raise ValidationError('Неверный код подтверждения!')
+
+        return attrs
