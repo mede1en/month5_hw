@@ -19,7 +19,7 @@ class Product(BaseModel):
     description = models.TextField(null=True, blank=True)
     price = models.DecimalField(max_digits=9, decimal_places=2)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
-    owner = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    owner = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="products")
 
     def __str__(self):
         return self.title

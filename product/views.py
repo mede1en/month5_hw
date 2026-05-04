@@ -1,13 +1,12 @@
 from collections import OrderedDict
-
 from rest_framework import status
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, ListAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from common.permission import CanEditInSomeTime, IsAnonymous, IsOwner
+from common.permission import CanEditInSomeTime, IsAnonymous, IsOwner, IsModerator
 
 from .models import Category, Product, Review
 from .serializers import (
@@ -75,7 +74,17 @@ class ProductListCreateAPIView(ListCreateAPIView):
     queryset = Product.objects.select_related("category").all()
     serializer_class = ProductSerializer
     pagination_class = CustomPagination
-    permission_classes = [IsOwner | IsAnonymous]
+    permission_classes = [IsOwner | IsAnonymous | IsModerator]
+
+    def get_queryset(self):
+        user = self.request.user
+
+        if user.is_authenticated:
+            if user.is_staff:
+                return Product.objects.all()
+            return Product.objects.filter(owner=user)
+
+        return Product.objects.none()
 
     def post(self, request, *args, **kwargs):
         serializer = ProductValidateSerializer(data=request.data)
@@ -166,3 +175,5 @@ class ProductWithReviewsAPIView(APIView):
 
         serializer = ProductWithReviewsSerializer(result_page, many=True)
         return paginator.get_paginated_response(serializer.data)
+
+
