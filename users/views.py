@@ -52,14 +52,16 @@ class RegistrationAPIView(CreateAPIView):
 
         email = serializer.validated_data["email"]
         password = serializer.validated_data["password"]
+        phone_number = serializer.validated_data.get("phone_number")  # 👈 добавили
 
-        # Use transaction to ensure data consistency
         with transaction.atomic():
             user = CustomUser.objects.create_user(
-                email=email, password=password, is_active=False
+                email=email,
+                password=password,
+                phone_number=phone_number,  # 👈 добавили
+                is_active=False
             )
 
-            # Create a random 6-digit code
             code = "".join(random.choices(string.digits, k=6))
 
             confirmation_code = ConfirmationCode.objects.create(user=user, code=code)

@@ -7,8 +7,8 @@ from django.contrib.auth import get_user_model
 CustomUser = get_user_model()
 
 class UserBaseSerializer(serializers.Serializer):
-    email = serializers.CharField(max_length=150)
-    password = serializers.CharField()
+    email = serializers.EmailField(max_length=150)
+    password = serializers.CharField(write_only=True)
 
 
 class AuthValidateSerializer(UserBaseSerializer):
@@ -16,10 +16,12 @@ class AuthValidateSerializer(UserBaseSerializer):
 
 
 class RegisterValidateSerializer(UserBaseSerializer):
-    def validate_username(self, email):
+    phone_number = serializers.CharField(required=False)
+
+    def validate_email(self, email):
         try:
             CustomUser.objects.get(email=email)
-        except:
+        except CustomUser.DoesNotExist:
             return email
         raise ValidationError('CustomUser уже существует!')
 
