@@ -114,7 +114,7 @@ class ProductDetailAPIView(RetrieveUpdateDestroyAPIView):
     queryset = Product.objects.select_related("category").all()
     serializer_class = ProductSerializer
     lookup_field = "id"
-    permission_classes = [(IsOwner & CanEditInSomeTime) | IsAnonymous]
+    permission_classes = [(IsOwner & CanEditInSomeTime) | IsAnonymous | IsModerator]
 
     def put(self, request, *args, **kwargs):
         product = self.get_object()
@@ -125,6 +125,7 @@ class ProductDetailAPIView(RetrieveUpdateDestroyAPIView):
         product.description = serializer.validated_data.get("description")
         product.price = serializer.validated_data.get("price")
         product.category = serializer.validated_data.get("category")
+        product.owner = request.user
         product.save()
 
         return Response(data=ProductSerializer(product).data)
