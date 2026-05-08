@@ -1,10 +1,36 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from .models import ConfirmationCode
+from .models import ConfirmationCode, CustomUser
 from django.contrib.auth import get_user_model
-
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.contrib.auth.models import User
 
 CustomUser = get_user_model()
+class UserCreateSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField()
+    birthdate = serializers.DateField(required=False)
+
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'username', 'password', 'phone', 'birthdate']
+
+    def create(self, validated_data):
+        user = CustomUser.objects.create_user(
+            email=validated_data['email'],
+            username=validated_data['username'],
+            password=validated_data['password'],
+            phone=validated_data.get('phone'),
+            birthdate=validated_data.get('birthdate')
+        )
+        return user
+
+    def validate_username(self, email):
+        try:
+            CustomUser.objects.get(email=email)
+        except CustomUser.DoesNotExist:
+            return email
+        raise ValidationError('User already exists!')
 
 class UserBaseSerializer(serializers.Serializer):
     email = serializers.EmailField(max_length=150)
@@ -48,3 +74,10 @@ class ConfirmationSerializer(serializers.Serializer):
             raise ValidationError('Неверный код подтверждения!')
 
         return attrs
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        token['birthdate'] = str(user.birthdate) if user.birthdate else None
+        return token

@@ -1,13 +1,13 @@
 import random
 import string
-
 from django.contrib.auth import authenticate, get_user_model
 from django.db import transaction
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
-
+from rest_framework_simplejwt.views import TokenObtainPairView
+from users.serializers import CustomTokenObtainPairSerializer
 from .models import ConfirmationCode
 from .serializers import (
     AuthValidateSerializer,
@@ -52,14 +52,16 @@ class RegistrationAPIView(CreateAPIView):
 
         email = serializer.validated_data["email"]
         password = serializer.validated_data["password"]
-        phone_number = serializer.validated_data.get("phone_number")  # 👈 добавили
+        phone_number = serializer.validated_data.get("phone_number")
+        birthdate = serializer.validated_data.get("birthdate")
 
         with transaction.atomic():
             user = CustomUser.objects.create_user(
                 email=email,
                 password=password,
-                phone_number=phone_number,  # 👈 добавили
-                is_active=False
+                phone_number=phone_number,
+                is_active=False,
+                birthdate=birthdate,
             )
 
             code = "".join(random.choices(string.digits, k=6))
@@ -97,3 +99,6 @@ class ConfirmUserAPIView(CreateAPIView):
                 "key": token.key,
             },
         )
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer

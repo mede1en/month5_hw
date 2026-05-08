@@ -5,9 +5,9 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
-
+from common.validatiors import validate_age
 from common.permission import CanEditInSomeTime, IsAnonymous, IsOwner, IsModerator
-
+from django.db import transaction
 from .models import Category, Product, Review
 from .serializers import (
     CategorySerializer,
@@ -78,32 +78,27 @@ class ProductListCreateAPIView(ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
+        if user.is_staff:
+            return Product.objects.all()
+        return Product.objects.filter(owner=user)
 
-        if user.is_authenticated:
-            if user.is_staff:
-                return Product.objects.all()
-            return Product.objects.filter(owner=user)
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return ProductValidateSerializer
+        return ProductSerializer
 
-        return Product.objects.none()
-
-    def post(self, request, *args, **kwargs):
-        serializer = ProductValidateSerializer(data=request.data)
+    def create(self, request, *args, **kwargs):
+        birthdate = getattr(request.user, 'birthdate', None)
+        validate_age(birthdate)
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
-        # Get validated data
-        title = serializer.validated_data.get("title")
-        description = serializer.validated_data.get("description")
-        price = serializer.validated_data.get("price")
-        category = serializer.validated_data.get("category")
-
-        # Create product
-        product = Product.objects.create(
-            title=title,
-            description=description,
-            price=price,
-            category=category,
-            owner=request.user,
-        )
+        with transaction.atomic():
+            product = Product.objects.create(
+                title=serializer.validated_data['title'],
+                description=serializer.validated_data['description'],
+                price=serializer.validated_data['price'],
+                category_id=serializer.validated_data['category'],
+                owner=request.user)
 
         return Response(
             data=ProductSerializer(product).data, status=status.HTTP_201_CREATED
