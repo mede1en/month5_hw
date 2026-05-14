@@ -1,3 +1,4 @@
+from users.google_oauth import GoogleLoginAPIView
 from django.urls import path
 from users.views import RegistrationAPIView, AuthorizationAPIView, ConfirmUserAPIView, CustomTokenObtainPairView
 from rest_framework_simplejwt.views import (
@@ -14,4 +15,6 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
     path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+
+    path('google-login/', GoogleLoginAPIView.as_view()),
 ]

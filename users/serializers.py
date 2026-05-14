@@ -1,40 +1,31 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from .models import ConfirmationCode, CustomUser
+from .models import ConfirmationCode
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from django.contrib.auth.models import User
+from django.utils import timezone
 
 CustomUser = get_user_model()
-class UserCreateSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    password = serializers.CharField()
-    birthdate = serializers.DateField(required=False)
 
-    class Meta:
-        model = User
-        fields = ['id', 'email', 'username', 'password', 'phone', 'birthdate']
 
-    def create(self, validated_data):
-        user = CustomUser.objects.create_user(
-            email=validated_data['email'],
-            username=validated_data['username'],
-            password=validated_data['password'],
-            phone=validated_data.get('phone'),
-            birthdate=validated_data.get('birthdate')
-        )
-        return user
+class OAuthCodeSerializer(serializers.Serializer):
+    code = serializers.CharField()
 
-    def validate_username(self, email):
-        try:
-            CustomUser.objects.get(email=email)
-        except CustomUser.DoesNotExist:
-            return email
-        raise ValidationError('User already exists!')
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        token["email"] = user.email
+        token["is_staff"] = user.is_staff
+        token["first_name"] = user.first_name or ''
+        token["last_name"] = user.last_name or ''
+        return token
+
 
 class UserBaseSerializer(serializers.Serializer):
-    email = serializers.EmailField(max_length=150)
-    password = serializers.CharField(write_only=True)
+    email = serializers.CharField(max_length=150)
+    password = serializers.CharField()
 
 
 class AuthValidateSerializer(UserBaseSerializer):
@@ -42,14 +33,15 @@ class AuthValidateSerializer(UserBaseSerializer):
 
 
 class RegisterValidateSerializer(UserBaseSerializer):
-    phone_number = serializers.CharField(required=False)
+    phone_number = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    birthdate = serializers.DateField(required=False, allow_null=True)
 
     def validate_email(self, email):
         try:
             CustomUser.objects.get(email=email)
         except CustomUser.DoesNotExist:
             return email
-        raise ValidationError('CustomUser уже существует!')
+        raise ValidationError("Пользователь уже существует!")
 
 
 class ConfirmationSerializer(serializers.Serializer):
@@ -57,27 +49,27 @@ class ConfirmationSerializer(serializers.Serializer):
     code = serializers.CharField(max_length=6)
 
     def validate(self, attrs):
-        user_id = attrs.get('user_id')
-        code = attrs.get('code')
+        user_id = attrs.get("user_id")
+        code = attrs.get("code")
 
         try:
             user = CustomUser.objects.get(id=user_id)
         except CustomUser.DoesNotExist:
-            raise ValidationError('CustomUser не существует!')
+            raise ValidationError("Пользователь не существует!")
 
         try:
             confirmation_code = ConfirmationCode.objects.get(user=user)
         except ConfirmationCode.DoesNotExist:
-            raise ValidationError('Код подтверждения не найден!')
+            raise ValidationError("Код подтверждения не найден!")
 
         if confirmation_code.code != code:
-            raise ValidationError('Неверный код подтверждения!')
+            raise ValidationError("Неверный код подтверждения!")
 
         return attrs
 
-class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    @classmethod
-    def get_token(cls, user):
-        token = super().get_token(user)
-        token['birthdate'] = str(user.birthdate) if user.birthdate else None
-        return token
+
+
+class GoogleUserInfoSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    given_name = serializers.CharField(required=False, allow_blank=True)
+    family_name = serializers.CharField(required=False, allow_blank=True)
