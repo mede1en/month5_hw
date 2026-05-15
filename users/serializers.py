@@ -1,10 +1,9 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from .models import ConfirmationCode
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.utils import timezone
-
+from . import utils
 CustomUser = get_user_model()
 
 
@@ -45,27 +44,28 @@ class RegisterValidateSerializer(UserBaseSerializer):
 
 
 class ConfirmationSerializer(serializers.Serializer):
-    user_id = serializers.IntegerField()
+    email = serializers.EmailField()
     code = serializers.CharField(max_length=6)
 
     def validate(self, attrs):
-        user_id = attrs.get("user_id")
+        email = attrs.get('email')
         code = attrs.get("code")
 
         try:
-            user = CustomUser.objects.get(id=user_id)
+            user = CustomUser.objects.get(email=email)
         except CustomUser.DoesNotExist:
-            raise ValidationError("Пользователь не существует!")
+            raise serializers.ValidationError("Пользователь не существует!")
 
-        try:
-            confirmation_code = ConfirmationCode.objects.get(user=user)
-        except ConfirmationCode.DoesNotExist:
-            raise ValidationError("Код подтверждения не найден!")
+        if not utils.verify_confirmation_code(email, code):
+            raise serializers.ValidationError("неверный код подтверждения")
 
-        if confirmation_code.code != code:
-            raise ValidationError("Неверный код подтверждения!")
-
+        attrs['user'] = user
         return attrs
+
+    def save(self, **kwargs):
+        user = self.validated_data['user']
+        user.is_active = True
+        user.save()
 
 
 

@@ -8,12 +8,15 @@ from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from users.serializers import CustomTokenObtainPairSerializer
-from .models import ConfirmationCode
 from .serializers import (
     AuthValidateSerializer,
     ConfirmationSerializer,
     RegisterValidateSerializer,
 )
+from . import utils
+
+
+
 
 CustomUser = get_user_model()
 
@@ -64,7 +67,9 @@ class RegistrationAPIView(CreateAPIView):
                 birthdate=birthdate,
             )
 
-            code = "".join(random.choices(string.digits, k=6))
+            code = utils.generate_random_code()
+            utils.save_code_to_cache(user.email, code)
+            print("Code generated and saved to cache")
 
             confirmation_code = ConfirmationCode.objects.create(user=user, code=code)
 
