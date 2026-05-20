@@ -14,7 +14,7 @@ from .serializers import (
     RegisterValidateSerializer,
 )
 from . import utils
-
+from users.tasks import add, send_confirmation_code
 
 
 
@@ -25,6 +25,7 @@ class AuthorizationAPIView(CreateAPIView):
     serializer_class = AuthValidateSerializer
 
     def post(self, request):
+        add.delay(8,2)
         serializer = AuthValidateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -72,6 +73,7 @@ class RegistrationAPIView(CreateAPIView):
             print("Code generated and saved to cache")
 
             confirmation_code = ConfirmationCode.objects.create(user=user, code=code)
+            send_otp_mail.delay(email=email, code=code)
 
         return Response(
             status=status.HTTP_201_CREATED,

@@ -13,8 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 from datetime import timedelta
-
-from django.conf.global_settings import CACHES
+from decouple import config
+from celery.schedules import crontab
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,10 +24,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get("SECRET")
+SECRET_KEY = config("SECRET")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config("DEBUG", cast=bool)
 ALLOWED_HOSTS = []
 
 
@@ -118,11 +118,15 @@ WSGI_APPLICATION = "shop_api.wsgi.application"
 # }
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
+     'default': {
+         'ENGINE': 'django.db.backends.postgresql',
+         'NAME': os.environ.get('DB_NAME'),
+         'USER': os.environ.get('DB_USER'),
+         'PASSWORD': os.environ.get('DB_PASSWORD'),
+         'HOST': os.environ.get('DB_HOST'),
+         'PORT': os.environ.get('DB_PORT'),
+     }
+  }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -199,7 +203,26 @@ SIMPLE_JWT = {
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/5",
+        "LOCATION": config("REDIS_URL"),
         "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
     }
 }
+
+CELERY_BROKER_URL = config("CELERY_BROKER_URL")
+CELERY_RESULT_BACKEND = config("CELERY_RESULT_BACKEND")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+
+CELERY_BEAT_SCHEDULE = {
+    "delete-inactive-users-every-day-at-02-00": {
+        "task": "users.tasks.delete_inactive_users",
+        "schedule": crontab(hour=15, minute=11),
+    },
+}
+EMAIL_USE_TLS = True
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_HOST_USER = config("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")

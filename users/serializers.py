@@ -32,8 +32,8 @@ class AuthValidateSerializer(UserBaseSerializer):
 
 
 class RegisterValidateSerializer(UserBaseSerializer):
-    phone_number = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    birthdate = serializers.DateField(required=False, allow_null=True)
+    # phone_number = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    # birthdate = serializers.DateField(required=False, allow_null=True)
 
     def validate_email(self, email):
         try:
